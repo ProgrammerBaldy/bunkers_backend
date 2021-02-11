@@ -2,8 +2,11 @@ from rest_framework.response import Response
 from rest_framework import generics
 from . models import Supply, Subproduct, Subproduct_supplies, Product, Product_supplies, Product_subproducts
 from . serializers import SupplySerializer, SubproductSerializer, Subproduct_suppliesSerializer, ProductSerializer, Product_suppliesSerializer, Product_subproductsSerializer
+from rest_framework.permissions import IsAuthenticated
+
 
 class SupplyView(generics.RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
     queryset = Supply.objects.all()
 
     def get(self, request, *args, **kwargs):
