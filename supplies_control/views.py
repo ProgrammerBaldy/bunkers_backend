@@ -5,12 +5,17 @@ from . serializers import SupplySerializer, SubproductSerializer, Subproduct_sup
 from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
 from django.core import serializers
+import json
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import status
+
 
 class SupplyView(generics.RetrieveAPIView):
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, *args, **kwargs):
+    def get (self, request, *args, **kwargs):
         header = ['Insumo', 'Unidade de Medida', 'Quantidade em Estoque', 'Custo Médio R$', 'Ação']
+        header_keys = ['name', 'measure_unit', 'stock', 'average_cost', 'id']
         raw_supplies = Supply.objects.raw("SELECT name, measure_unit, stock, average_cost, id  FROM supplies_control_supply")
         supply_list = []
         supply_list.append(header)
@@ -22,7 +27,50 @@ class SupplyView(generics.RetrieveAPIView):
             dummy.append(s.average_cost)
             dummy.append(s.id)
             supply_list.append(dummy)
-        return JsonResponse({'raw_data' : supply_list})
+        return JsonResponse({'raw_data' : supply_list, 'keys' : header_keys})
+
+    def post (self, request, *args, **kwargs):
+        payload = json.loads(request.body)
+        try:
+            supply = Supply.objects.create(
+                name = payload["name"],
+                measure_unit = payload["measure_unit"],
+                average_cost = payload["average_cost"],
+                stock = payload["stock"]
+            )
+            serializer = SupplySerializer(supply)
+            return JsonResponse({'supply': serializer.data}, safe=False, status=status.HTTP_201_CREATED)
+        except ObjectDoesNotExist as e:
+            return JsonResponse({'error': str(e)}, safe=False, status=status.HTTP_404_NOT_FOUND)
+        except Exception:
+            return JsonResponse({'error': 'Something terrible went wrong'}, safe=False, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def patch (self, request, *args, **kwargs):
+        payload = json.loads(request.body)
+        print('Ailton', payload)
+        try:
+            print('Ailton', payload["id"])
+            old_supply = Supply.objects.filter(id = payload["id"])
+            old_supply.update(**payload)
+            supply = Supply.objects.get(id = payload["id"])
+            serializer = SupplySerializer(supply)
+            return JsonResponse({'supply': serializer.data}, safe=False, status=status.HTTP_200_OK)
+        except ObjectDoesNotExist as e:
+            return JsonResponse({'error': str(e)}, safe=False, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({'error': 'Something terrible went wrong : ' + str(e)}, safe=False, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete (self, request, *args, **kwargs):
+        payload = json.loads(request.body)
+        try:
+            supply = Supply.objects.filter(id = payload["id"])
+            supply.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ObjectDoesNotExist as e:
+            return JsonResponse({'error': str(e)}, safe=False, status=status.HTTP_404_NOT_FOUND)
+        except Exception:
+            return JsonResponse({'error': 'Something terrible went wrong'}, safe=False, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
 
 class SubproductView(generics.RetrieveAPIView):
     queryset = Subproduct.objects.all()
