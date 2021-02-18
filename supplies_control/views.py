@@ -47,9 +47,7 @@ class SupplyView(generics.RetrieveAPIView):
 
     def patch (self, request, *args, **kwargs):
         payload = json.loads(request.body)
-        print('Ailton', payload)
         try:
-            print('Ailton', payload["id"])
             old_supply = Supply.objects.filter(id = payload["id"])
             old_supply.update(**payload)
             supply = Supply.objects.get(id = payload["id"])
@@ -79,6 +77,31 @@ class SubproductView(generics.RetrieveAPIView):
         queryset = self.get_queryset()
         serializer = SubproductSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    def post (self, request, *args, **kwargs):
+        payload = json.loads(request.body)
+        try:
+            subproduct = Subproduct.objects.create(
+                name = payload["name"],
+                measure_unit = payload["measure_unit"],
+                production_cost = payload["average_cost"],
+                stock = payload["stock"]
+            )
+            #insert supplies
+            for item in payload["supplies"]:
+                subproduct_supplies = Subproduct_supplies.objects.create(
+                    subproductid = subproduct,
+                    supplyid = Supply.objects.get(id = item["supplyid"]),
+                    quantity = item["quantity"]
+                )
+
+            serializer = SubproductSerializer(subproduct)
+            return JsonResponse({'subproduct': 'ok'}, safe=False, status=status.HTTP_201_CREATED)
+        except ObjectDoesNotExist as e:
+            return JsonResponse({'error': str(e)}, safe=False, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({'error': 'Something terrible went wrong: '+str(e)}, safe=False, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class Subproduct_suppliesView(generics.RetrieveAPIView):
     queryset = Subproduct_supplies.objects.all()
