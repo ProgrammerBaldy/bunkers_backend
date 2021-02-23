@@ -116,7 +116,7 @@ class SubproductView(generics.RetrieveAPIView):
 
     def get(self, request, *args, **kwargs):
         subproductid = self.kwargs.get('subproductid')
-        raw_supplies = Subproduct.objects.raw('''SELECT sp.id, ss.quantity, s.average_cost AS total_cost, s.id AS supply_id
+        raw_supplies = Subproduct.objects.raw('''SELECT sp.id, s.name, s.measure_unit, ss.quantity, s.average_cost AS total_cost, s.id AS supply_id
                                                     FROM supplies_control_subproduct sp
                                                     LEFT JOIN supplies_control_subproduct_supplies ss ON ss.subproductid_id = sp.id
                                                     LEFT JOIN supplies_control_supply s ON s.id = ss.supplyid_id
@@ -124,6 +124,8 @@ class SubproductView(generics.RetrieveAPIView):
         supply_list = []
         for s in raw_supplies:
             dummy = []
+            dummy.append(s.name)
+            dummy.append(s.measure_unit)
             dummy.append(s.quantity)
             dummy.append(s.total_cost)
             dummy.append(s.supply_id)
