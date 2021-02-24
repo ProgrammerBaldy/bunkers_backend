@@ -89,22 +89,26 @@ class SubproductView(generics.RetrieveAPIView):
         payload = json.loads(request.body)
         try:
             subproduct = Subproduct.objects.get(pk=subproductid)
+            
             subproduct.name = payload["name"]
             subproduct.measure_unit = payload["measure_unit"]
             subproduct.production_cost = payload["average_cost"]
+            
             subproduct.stock = payload["stock"]
+            
             subproduct.recipe_final_weight = payload["recipe_final_weight"]
+            
             subproduct.save()
             #insert supplies
-            subproduct_supplies = Subproduct_supplies.objects.get(subproductid=subproductid)
-            for item in subproductid:
-                item.delete()
-
+            if (Subproduct_supplies.objects.filter(subproductid_id=subproductid).exists()):
+                subproduct_supplies = Subproduct_supplies.objects.get(subproductid_id=subproductid)
+                for item in subproduct_supplies:
+                    item.delete()
             for item in payload["supplies"]:
                 subproduct_supplies = Subproduct_supplies.objects.create(
                     subproductid = subproduct,
                     supplyid = Supply.objects.get(id = item["supplyid"]),
-                    quantity = item["quantity"]
+                    quantity =  float(item["quantity"])
                 )
 
             serializer = SubproductSerializer(subproduct)
