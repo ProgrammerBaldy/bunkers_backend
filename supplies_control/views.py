@@ -197,21 +197,101 @@ class Subproduct_suppliesView(generics.RetrieveAPIView):
             subproducts_list.append(dummy)
         return JsonResponse({'raw_data' : subproducts_list, 'keys' : header_keys})
 
+
+
+
 class ProductView(generics.RetrieveAPIView):
     queryset = Product.objects.all()
 
     def get(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = ProductSerializer(queryset, many=True)
-        return Response(serializer.data)
+        productid = self.kwargs.get('productid')
+        raw_supplies = Subproduct.objects.raw('''SELECT sp.id, s.name, s.measure_unit, ss.quantity, s.average_cost AS total_cost, s.id AS supply_id
+                                                    FROM supplies_control_subproduct sp
+                                                    LEFT JOIN supplies_control_subproduct_supplies ss ON ss.subproductid_id = sp.id
+                                                    LEFT JOIN supplies_control_supply s ON s.id = ss.supplyid_id
+                                                    WHERE sp.id = '''+str(productid))
+        supply_list = []
+        for s in raw_supplies:
+            dummy = []
+            dummy.append(s.name)
+            dummy.append(s.measure_unit)
+            dummy.append(s.quantity)
+            dummy.append(s.total_cost)
+            dummy.append(s.supply_id)
+            supply_list.append(dummy)
+        raw_subproduct = Subproduct.objects.raw('''SELECT sp.id, sp.name, sp.measure_unit, sp.stock
+                                                    FROM supplies_control_subproduct sp
+                                                    WHERE sp.id = '''+str(productid))
+        subproduct = []
+        for s in raw_supplies:
+            dummy = []
+            dummy.append(s.name)
+            dummy.append(s.measure_unit)
+            dummy.append(s.stock)
+            dummy.append(s.id)
+            subproduct.append(dummy)
+        
+        return JsonResponse({'supplies' : supply_list, 'subproduct' : subproduct})
+
+    def post (self, request, *args, **kwargs):
+        payload = json.loads(request.body)
+        print (payload["measure_unit"],payload["average_cost"],
+payload["stock"],
+payload["selling_price"])
+        try:
+            product = Product.objects.create(
+                name = payload["name"],
+                measure_unit = payload["measure_unit"],
+                production_cost = payload["average_cost"],
+                stock = payload["stock"],
+                selling_price = payload["selling_price"]
+            )
+            #insert supplies
+            for item in payload["supplies"]:
+                print (item)
+                product_supplies = Product_supplies.objects.create(
+                    productid = product,
+                    supplyid = Supply.objects.get(id = item["supplyid"]),
+                    quantity = item["quantity"]
+                )
+            #insert subproducts
+            for item in payload["subproducts"]:
+                product_subproducts = Product_subproducts.objects.create(
+                    productid = product,
+                    subproductid = Subproduct.objects.get(id = item["subproductid"]),
+                    quantity = item["quantity"]
+                )
+
+            serializer = SubproductSerializer(product)
+            return JsonResponse({'product': 'ok'}, safe=False, status=status.HTTP_201_CREATED)
+        except ObjectDoesNotExist as e:
+            return JsonResponse({'error': str(e)}, safe=False, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({'error': 'Something terrible went wrong: '+str(e)}, safe=False, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class Product_suppliesView(generics.RetrieveAPIView):
     queryset = Product_supplies.objects.all()
 
     def get(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
-        serializer = Product_suppliesSerializer(queryset, many=True)
-        return Response(serializer.data)
+        header = ['Nome', 'Unidade de Medida', 'Quantidade em Estoque', 'Custo Médio R$', 'Ação']
+        header_keys = ['name', 'measure_unit', 'stock', 'total_cost', 'id']
+        raw_subproducts = Subproduct.objects.raw('''SELECT sp.name, sp.measure_unit, sp.stock, SUM(ss.quantity * s.average_cost) AS total_cost, sp.id
+                                            FROM supplies_control_subproduct sp
+                                            LEFT JOIN supplies_control_subproduct_supplies ss ON ss.subproductid_id = sp.id
+                                            LEFT JOIN supplies_control_supply s ON s.id = ss.supplyid_id
+                                            GROUP BY sp.id''')
+        subproducts_list = []
+        subproducts_list.append(header)
+        for s in raw_subproducts:
+            dummy = []
+            dummy.append(s.name)
+            dummy.append(s.measure_unit)
+            dummy.append(s.stock)
+            dummy.append(s.total_cost)
+            dummy.append(s.id)
+            subproducts_list.append(dummy)
+        return JsonResponse({'raw_data' : subproducts_list, 'keys' : header_keys})
 
 class Product_subproductsView(generics.RetrieveAPIView):
     queryset = Product_subproducts.objects.all()
