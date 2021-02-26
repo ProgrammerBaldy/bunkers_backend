@@ -9,4 +9,5 @@ urlpatterns = [
     path('subproducts_supplies/', Subproduct_suppliesView.as_view(), name="subproducts_supplies_view"),
     path('products/<int:productid>', ProductView.as_view(), name="products_view"),
     path('products/', ProductView.as_view(), name="products_view"),
+    path('products_supplies/', Product_suppliesView.as_view(), name="products_supplies_view"),
 ]
