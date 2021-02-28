@@ -293,7 +293,7 @@ class ProductView(generics.RetrieveAPIView):
             dummy.append(sp.name)
             dummy.append(sp.measure_unit)
             dummy.append(sp.quantity)
-            dummy.append(sp.id)
+            dummy.append(sp.supply_id)
             subproducts.append(dummy)
 
         raw_products = Product.objects.raw('''SELECT p.id, p.name, p.measure_unit, p.stock, p.selling_price
@@ -331,6 +331,7 @@ class ProductView(generics.RetrieveAPIView):
                 )
             #insert subproducts
             for item in payload["subproducts"]:
+                print (item)
                 product_subproducts = Product_subproducts.objects.create(
                     productid = product,
                     subproductid = Subproduct.objects.get(id = item["subproductid"]),
