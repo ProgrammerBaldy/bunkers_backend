@@ -49,6 +49,9 @@ CORS_ORIGIN_WHITELIST = (
     'http://localhost:80',
     'http://127.0.0.1',
     'http://localhost',
+    
+    'https://bunkers-backend.herokuapp.com/',
+    'https://amazing-torvalds-243072.netlify.app/',
 )
 
 ROOT_URLCONF = 'bunkers_backend.urls'
